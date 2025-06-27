@@ -1,0 +1,56 @@
+# GUI框架
+PyQt6>=6.5.0
+PyQt6-tools>=6.5.0
+
+# HTTP客户端和API集成
+aiohttp>=3.8.0
+openai>=1.0.0
+requests>=2.28.0
+
+# 配置文件处理
+toml>=0.10.2
+
+# 音频处理
+pyaudio>=0.2.11
+pyttsx3>=2.90
+SpeechRecognition>=3.10.0
+wave>=0.0.2
+
+# 数据库
+aiosqlite>=0.19.0
+
+# 异步编程
+asyncio-mqtt>=0.13.0
+
+# 日志和调试
+loguru>=0.7.0
+
+# 系统工具
+psutil>=5.9.0
+pathlib2>=2.3.7
+
+# 音频格式支持
+soundfile>=0.12.1
+numpy>=1.24.0
+
+# GUI主题和样式
+qdarkstyle>=3.2.0
+
+# 加密和安全
+cryptography>=41.0.0
+
+# 时间处理
+python-dateutil>=2.8.2
+
+# JSON处理增强
+orjson>=3.9.0
+
+# 开发和测试工具（可选）
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-qt>=4.2.0
+black>=23.0.0
+flake8>=6.0.0
+
+# 树莓派特定依赖
+RPi.GPIO>=0.7.1; platform_machine=="armv7l" or platform_machine=="aarch64" 
