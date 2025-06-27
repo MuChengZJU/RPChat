@@ -6,6 +6,7 @@ RPChat - 基于PyQt的智能语音对话前端
 
 import sys
 import asyncio
+import signal
 from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
@@ -54,18 +55,27 @@ class RPChatApplication:
             self.app.setApplicationVersion("1.0.0")
             self.app.setOrganizationName("RPChat Team")
             
+            # 设置退出处理
+            self.app.aboutToQuit.connect(self.cleanup)
+            
             # 初始化配置管理器
+            logger.info("正在初始化配置管理器...")
             self.config_manager = ConfigManager()
             self.config_manager.load_config()
+            logger.info("配置管理器初始化完成")
             
             # 创建主窗口
+            logger.info("正在创建主窗口...")
             self.main_window = MainWindow(self.config_manager)
+            logger.info("主窗口创建完成")
             
             logger.info("RPChat 应用程序初始化完成")
             return True
             
         except Exception as e:
             logger.error(f"应用程序初始化失败: {e}")
+            import traceback
+            logger.error(f"详细错误信息:\n{traceback.format_exc()}")
             return False
     
     def run(self):
@@ -75,6 +85,7 @@ class RPChatApplication:
             
         try:
             # 显示主窗口
+            logger.info("正在显示主窗口...")
             self.main_window.show()
             
             logger.info("RPChat 应用程序启动成功")
@@ -84,6 +95,8 @@ class RPChatApplication:
             
         except Exception as e:
             logger.error(f"应用程序运行错误: {e}")
+            import traceback
+            logger.error(f"详细错误信息:\n{traceback.format_exc()}")
             return 1
         finally:
             self.cleanup()
@@ -92,14 +105,32 @@ class RPChatApplication:
         """清理资源"""
         logger.info("正在清理应用程序资源...")
         
-        if self.main_window:
-            self.main_window.cleanup()
-        
-        logger.info("应用程序已退出")
+        try:
+            if self.main_window:
+                self.main_window.cleanup()
+            
+            # 等待所有线程结束
+            logger.info("等待线程结束...")
+            import time
+            time.sleep(0.5)
+            
+            logger.info("应用程序已退出")
+        except Exception as e:
+            logger.error(f"清理资源时出错: {e}")
+
+
+def signal_handler(sig, frame):
+    """信号处理器"""
+    logger.info(f"接收到信号 {sig}，正在退出...")
+    QApplication.quit()
 
 
 def main():
     """主函数"""
+    # 设置信号处理器
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     app = RPChatApplication()
     return app.run()
 

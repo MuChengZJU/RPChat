@@ -18,12 +18,15 @@ recognition_language = "zh-CN"
 recognition_timeout = 5
 recognition_phrase_time_limit = 30
 tts_enabled = true
-tts_engine = "espeak"
-tts_voice = "zh"
+tts_engine = "fish_audio"
 tts_rate = 150
 tts_volume = 0.8
 input_device_index = -1
 output_device_index = -1
+
+[audio.fish_audio]
+api_key = "cb51f1d74e8a4f15854d6fa5c701dea4"
+voice_id = "aebaa2305aa2452fbdc8f41eec852a79"
 
 [ui]
 theme = "light"

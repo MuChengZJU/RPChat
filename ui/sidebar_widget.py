@@ -94,7 +94,7 @@ class SidebarWidget(QWidget):
         except Exception as e:
             logger.error(f"侧边栏存储管理器初始化失败: {e}")
             UIUtils.show_error_message(self, "错误", f"数据存储初始化失败: {e}")
-
+    
     def _init_ui(self):
         """初始化用户界面"""
         layout = QVBoxLayout(self)
@@ -212,7 +212,7 @@ class SidebarWidget(QWidget):
         
         for conversation in conversations:
             item = ConversationListItem(conversation)
-            self.conversation_list.addItem(item)
+        self.conversation_list.addItem(item)
         
         # 如果有对话且没有选中的，选中第一个
         if self.conversation_list.count() > 0 and not self.current_conversation_id:
@@ -455,23 +455,32 @@ class SidebarWidget(QWidget):
         """清理资源"""
         logger.info("正在清理侧边栏组件资源...")
         
-        # 清理存储管理器
-        if self.storage_manager:
-            try:
-                import asyncio
+        try:
+            # 清理存储管理器
+            if hasattr(self, 'storage_manager') and self.storage_manager:
                 try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        asyncio.create_task(self.storage_manager.cleanup())
-                    else:
-                        loop.run_until_complete(self.storage_manager.cleanup())
-                except RuntimeError:
-                    asyncio.run(self.storage_manager.cleanup())
+                    # 这里不需要调用close，因为它会在主窗口中处理
+                    logger.debug("侧边栏存储管理器引用已清理")
+                except Exception as e:
+                    logger.error(f"清理侧边栏存储管理器时出错: {e}")
+            
+            # 清理列表项
+            try:
+                if hasattr(self, 'conversation_list') and self.conversation_list:
+                    self.conversation_list.clear()
+                    logger.debug("对话列表已清理")
             except Exception as e:
-                logger.error(f"清理存储管理器失败: {e}")
-        
-        # 停止定时器
-        if self.search_timer:
-            self.search_timer.stop()
-        
-        logger.info("侧边栏组件资源清理完成") 
+                logger.error(f"清理对话列表时出错: {e}")
+            
+            # 重置UI状态
+            try:
+                if hasattr(self, 'search_input') and self.search_input:
+                    self.search_input.clear()
+                logger.debug("侧边栏UI状态已重置")
+            except Exception as e:
+                logger.error(f"重置侧边栏UI状态时出错: {e}")
+            
+            logger.info("侧边栏组件资源清理完成")
+            
+        except Exception as e:
+            logger.error(f"侧边栏组件清理过程中出现错误: {e}") 

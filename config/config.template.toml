@@ -29,14 +29,17 @@ recognition_phrase_time_limit = 30
 
 # 语音合成配置
 tts_enabled = true
-tts_engine = "espeak"  # espeak, festival, pyttsx3
-tts_voice = "zh"
+tts_engine = "fish_audio"
 tts_rate = 150
 tts_volume = 0.8
 
 # 音频设备配置
 input_device_index = -1  # -1 表示使用默认设备
 output_device_index = -1
+
+[audio.fish_audio]
+api_key = "your_fish_audio_api_key"
+voice_id = "your_favorite_voice_id" # Optional, can be specified per request
 
 [ui]
 # 界面配置
