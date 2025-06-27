@@ -154,8 +154,12 @@ sudo apt install -y portaudio19-dev python3-pyaudio
 sudo apt install -y espeak espeak-data libespeak1 libespeak-dev
 sudo apt install -y flac libasound2-dev
 
-# 安装Qt6依赖
+# 安装Qt6依赖和开发工具
 sudo apt install -y python3-pyqt6 python3-pyqt6.qtmultimedia
+sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qtcreator
+
+# 安装构建工具（如果需要编译某些包）
+sudo apt install -y build-essential python3-dev
 ```
 
 ### Python环境准备
@@ -293,10 +297,11 @@ uv pip install --force-reinstall package_name
 - 使用异步编程避免界面卡顿
 - 合理使用缓存减少API调用
 
-### 跨平台兼容
-- 确保在Mac开发环境和树莓派部署环境的兼容性
-- 音频组件的跨平台适配
-- 路径处理的操作系统差异
+### 开发环境适配
+- **直接在树莓派开发：** 通过SSH连接进行远程开发
+- **ARM64架构限制：** 某些包（如PyQt6-tools）需要使用系统包替代
+- **性能考量：** 开发时注意树莓派的内存和CPU限制
+- **音频组件：** 确保音频设备在SSH会话中正确配置
 
 ### 用户体验
 - 响应式界面设计
@@ -347,19 +352,29 @@ aplay test.wav
 
 ### 开发环境问题
 
-**Q: 在Mac上开发，树莓派上部署有什么注意事项？**
-- 使用相同的Python版本
-- 注意音频库的平台差异
-- 测试不同分辨率的界面显示
-- 验证API网络连接
-
-**Q: 如何在无头树莓派上测试GUI？**
+**Q: 通过SSH在树莓派上开发GUI应用？**
 ```bash
-# 使用Xvfb虚拟显示
+# 启用X11转发（在Mac终端中连接）
+ssh -X user@raspberry_pi_ip
+
+# 或者在树莓派上使用虚拟显示
 sudo apt install xvfb
 export DISPLAY=:99
 Xvfb :99 -screen 0 1024x768x24 &
 python main.py
+
+# 如果有物理显示器连接到树莓派
+export DISPLAY=:0
+python main.py
+```
+
+**Q: PyQt6-tools安装失败怎么办？**
+```bash
+# 在ARM64架构（树莓派）上使用系统包
+sudo apt install qt6-tools-dev qt6-tools-dev-tools qtcreator
+
+# 验证Qt Designer是否可用
+which designer-qt6
 ```
 
 ## 📄 许可证
