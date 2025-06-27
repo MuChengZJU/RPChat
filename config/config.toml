@@ -1,0 +1,71 @@
+[application]
+name = "RPChat"
+version = "1.0.0"
+debug = false
+log_level = "INFO"
+
+[api]
+base_url = "https://www.sophnet.com/api/open-apis/v1"
+api_key = "kQa8X4wl4TqDqql5aeDKpb8hmTFS38hNpMeaWG_ROr6PPPNkObWruD_a-Ebqblm0YktrlOGJuzqtgJz1jMlLWg"
+model = "DeepSeek-V3-Fast"
+max_tokens = 2000
+temperature = 0.7
+timeout = 30
+
+[audio]
+speech_recognition_enabled = true
+recognition_language = "zh-CN"
+recognition_timeout = 5
+recognition_phrase_time_limit = 30
+tts_enabled = true
+tts_engine = "espeak"
+tts_voice = "zh"
+tts_rate = 150
+tts_volume = 0.8
+input_device_index = -1
+output_device_index = -1
+
+[ui]
+theme = "light"
+font_family = "Microsoft YaHei"
+font_size = 12
+window_width = 1000
+window_height = 700
+window_position_x = 100
+window_position_y = 100
+max_display_messages = 100
+auto_scroll = true
+show_timestamps = true
+message_animation = true
+
+[storage]
+database_path = "data/rpchat.db"
+backup_enabled = true
+backup_interval_hours = 24
+max_backup_files = 7
+export_format = "json"
+auto_save_interval = 300
+
+[performance]
+max_concurrent_requests = 2
+request_queue_size = 10
+ui_update_interval = 100
+memory_cleanup_interval = 300
+enable_response_cache = true
+cache_size_mb = 50
+cache_ttl_hours = 24
+
+[hotkeys]
+send_message = "Ctrl+Return"
+new_conversation = "Ctrl+N"
+save_conversation = "Ctrl+S"
+toggle_voice = "Ctrl+Space"
+clear_chat = "Ctrl+L"
+settings = "Ctrl+Comma"
+quit = "Ctrl+Q"
+
+[development]
+enable_debug_toolbar = false
+show_api_requests = false
+mock_api_responses = false
+simulate_slow_network = false
