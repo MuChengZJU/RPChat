@@ -1,5 +1,6 @@
 # 配置文件
 config.toml
+/config/config.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
