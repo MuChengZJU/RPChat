@@ -130,6 +130,7 @@ class ChatWidget(QWidget):
     def _init_voice_handler(self):
         """初始化语音处理器"""
         try:
+            logger.info("正在初始化语音处理器...")
             self.voice_handler = VoiceHandler(self.config)
             
             # 设置语音回调
@@ -142,13 +143,26 @@ class ChatWidget(QWidget):
             try:
                 self.voice_handler.initialize()
                 logger.info("语音处理器初始化完成")
+                
+                # 检查语音功能是否可用
+                if not self.voice_handler.tts_enabled and not self.voice_handler.recognition_enabled:
+                    logger.warning("语音识别和TTS都不可用，禁用语音按钮")
+                    self.voice_button.setEnabled(False)
+                    self.voice_button.setToolTip("语音功能不可用")
+                elif not self.voice_handler.tts_enabled:
+                    logger.warning("TTS不可用，语音输出功能将被禁用")
+                elif not self.voice_handler.recognition_enabled:
+                    logger.warning("语音识别不可用，语音输入功能将被禁用")
+                    
             except Exception as e:
                 logger.warning(f"语音处理器初始化失败，将禁用语音功能: {e}")
                 self.voice_button.setEnabled(False)
                 self.voice_button.setToolTip("语音功能不可用")
+                # 不清空voice_handler，因为它可能部分可用
                 
         except Exception as e:
             logger.error(f"语音处理器创建失败: {e}")
+            self.voice_handler = None
             self.voice_button.setEnabled(False)
             self.voice_button.setToolTip("语音功能不可用")
     
@@ -606,32 +620,44 @@ class ChatWidget(QWidget):
         """清理资源"""
         logger.info("正在清理聊天组件资源...")
         
-        # 停止语音处理
-        if self.voice_handler:
-            try:
-                self.voice_handler.cleanup()
-            except Exception as e:
-                logger.error(f"清理语音处理器失败: {e}")
-        
-        # 清理存储管理器
-        if self.storage_manager:
-            try:
-                # 异步清理存储管理器
-                import asyncio
+        try:
+            # 停止语音功能
+            if hasattr(self, 'voice_handler') and self.voice_handler:
                 try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        asyncio.create_task(self.storage_manager.cleanup())
-                    else:
-                        loop.run_until_complete(self.storage_manager.cleanup())
-                except RuntimeError:
-                    # 没有运行的事件循环
-                    asyncio.run(self.storage_manager.cleanup())
+                    self.voice_handler.stop_recording()
+                    self.voice_handler.stop_speaking()
+                    self.voice_handler.cleanup()
+                    logger.debug("语音处理器清理完成")
+                except Exception as e:
+                    logger.error(f"清理语音处理器时出错: {e}")
+            
+            # 取消正在进行的API请求
+            if hasattr(self, '_current_request_task') and self._current_request_task:
+                try:
+                    self._current_request_task.cancel()
+                    logger.debug("API请求任务已取消")
+                except Exception as e:
+                    logger.error(f"取消API请求时出错: {e}")
+            
+            # 清理存储管理器
+            if hasattr(self, 'storage_manager') and self.storage_manager:
+                try:
+                    # 这里不需要调用close，因为它会在主窗口中处理
+                    logger.debug("存储管理器引用已清理")
+                except Exception as e:
+                    logger.error(f"清理存储管理器时出错: {e}")
+            
+            # 清理UI状态
+            try:
+                self.send_button.setEnabled(True)
+                self.message_input.setEnabled(True)
+                if hasattr(self, 'voice_button'):
+                    self.voice_button.setEnabled(True)
+                logger.debug("UI状态已重置")
             except Exception as e:
-                logger.error(f"清理存储管理器失败: {e}")
-        
-        # 停止定时器
-        if self.loading_timer:
-            self.loading_timer.stop()
-        
-        logger.info("聊天组件资源清理完成") 
+                logger.error(f"重置UI状态时出错: {e}")
+            
+            logger.info("聊天组件资源清理完成")
+            
+        except Exception as e:
+            logger.error(f"聊天组件清理过程中出现错误: {e}") 
