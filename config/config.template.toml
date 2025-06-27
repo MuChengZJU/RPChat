@@ -1,0 +1,102 @@
+# RPChat 配置文件模板
+# 复制此文件为 config.toml 并根据需要修改配置
+
+[application]
+name = "RPChat"
+version = "1.0.0"
+debug = false
+log_level = "INFO"
+
+[api]
+# OpenAI API配置
+base_url = "https://api.openai.com/v1"
+api_key = "your-api-key-here"
+model = "gpt-3.5-turbo"
+max_tokens = 2000
+temperature = 0.7
+timeout = 30
+
+# 支持本地API服务
+# base_url = "http://localhost:8000/v1"  # 本地Ollama或vLLM服务
+# api_key = "not-needed-for-local"
+
+[audio]
+# 语音识别配置
+speech_recognition_enabled = true
+recognition_language = "zh-CN"
+recognition_timeout = 5
+recognition_phrase_time_limit = 30
+
+# 语音合成配置
+tts_enabled = true
+tts_engine = "fish_audio"
+tts_rate = 150
+tts_volume = 0.8
+
+# 音频设备配置
+input_device_index = -1  # -1 表示使用默认设备
+output_device_index = -1
+
+[audio.fish_audio]
+api_key = "your_fish_audio_api_key"
+voice_id = "your_favorite_voice_id" # Optional, can be specified per request
+sample_rate = 32000 # Fish Audio API 的默认采样率
+
+# 自动发送语音识别结果
+auto_send_voice = true
+
+[ui]
+# 界面配置
+theme = "dark"  # dark, light
+font_family = "Microsoft YaHei"
+font_size = 12
+window_width = 1000
+window_height = 700
+window_position_x = 100
+window_position_y = 100
+
+# 对话界面配置
+max_display_messages = 100
+auto_scroll = true
+show_timestamps = true
+message_animation = true
+
+[storage]
+# 数据存储配置
+database_path = "data/rpchat.db"
+backup_enabled = true
+backup_interval_hours = 24
+max_backup_files = 7
+
+# 导出配置
+export_format = "json"  # json, txt, markdown
+auto_save_interval = 300  # 秒
+
+[performance]
+# 性能优化配置（特别针对树莓派）
+max_concurrent_requests = 2
+request_queue_size = 10
+ui_update_interval = 100  # 毫秒
+memory_cleanup_interval = 300  # 秒
+
+# 缓存配置
+enable_response_cache = true
+cache_size_mb = 50
+cache_ttl_hours = 24
+
+[hotkeys]
+# 快捷键配置
+send_message = "Ctrl+Return"
+new_conversation = "Ctrl+N"
+save_conversation = "Ctrl+S"
+toggle_voice = "Ctrl+Space"
+clear_chat = "Ctrl+L"
+settings = "Ctrl+Comma"
+quit = "Ctrl+Q"
+
+[development]
+# 开发模式配置
+enable_debug_toolbar = false
+show_api_requests = false
+mock_api_responses = false
+simulate_slow_network = false 
