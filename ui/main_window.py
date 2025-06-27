@@ -17,6 +17,9 @@ from loguru import logger
 from ui.chat_widget import ChatWidget
 from ui.sidebar_widget import SidebarWidget
 from core.api_client import OpenAIAPIClient
+from core.storage_manager import StorageManager
+from core.voice_handler import VoiceHandler
+from utils.ui_utils import UIUtils
 
 
 class MainWindow(QMainWindow):
@@ -36,6 +39,8 @@ class MainWindow(QMainWindow):
         
         self.config = config_manager
         self.api_client = None
+        self.storage_manager = None
+        self.voice_handler = None
         self.chat_widget = None
         self.sidebar_widget = None
         
@@ -50,8 +55,13 @@ class MainWindow(QMainWindow):
         self._init_status_bar()
         self._apply_config()
         
-        # 初始化API客户端
+        # 初始化核心组件
         self._init_api_client()
+        self._init_storage_manager()
+        self._init_voice_handler()
+        
+        # 连接组件间的信号
+        self._connect_component_signals()
         
         logger.info("主窗口初始化完成")
     
@@ -273,10 +283,48 @@ class MainWindow(QMainWindow):
             logger.error(f"API客户端初始化失败: {e}")
             self._show_error_message("API客户端初始化失败", str(e))
     
+    def _init_storage_manager(self):
+        """初始化存储管理器"""
+        try:
+            self.storage_manager = StorageManager(self.config)
+            logger.info("存储管理器初始化成功")
+        except Exception as e:
+            logger.error(f"存储管理器初始化失败: {e}")
+            UIUtils.show_error_message(self, "存储管理器初始化失败", str(e))
+    
+    def _init_voice_handler(self):
+        """初始化语音处理器"""
+        try:
+            self.voice_handler = VoiceHandler(self.config)
+            logger.info("语音处理器初始化成功")
+        except Exception as e:
+            logger.warning(f"语音处理器初始化失败: {e}")
+            # 语音功能失败不应该阻止应用程序启动
+    
+    def _connect_component_signals(self):
+        """连接组件间的信号"""
+        if self.chat_widget and self.sidebar_widget:
+            # 侧边栏信号连接
+            self.sidebar_widget.conversation_selected.connect(self.chat_widget.load_conversation)
+            self.sidebar_widget.new_conversation.connect(self.chat_widget.new_conversation)
+            
+            # 聊天组件信号连接
+            self.chat_widget.conversation_updated.connect(self._on_conversation_updated)
+            
+            logger.debug("组件间信号连接完成")
+    
     def _process_async_tasks(self):
         """处理异步任务（在主线程中调用）"""
         # 这里可以处理需要在主线程中执行的异步任务回调
         pass
+    
+    # 事件处理方法
+    def _on_conversation_updated(self, conversation_id: str):
+        """对话更新事件处理"""
+        if self.sidebar_widget:
+            # 通知侧边栏更新对应的对话项
+            self.sidebar_widget.update_conversation(conversation_id)
+        logger.debug(f"对话已更新: {conversation_id}")
     
     # 菜单动作处理
     def _new_chat(self):
@@ -284,10 +332,7 @@ class MainWindow(QMainWindow):
         if self.chat_widget:
             self.chat_widget.new_conversation()
         
-        if self.sidebar_widget:
-            self.sidebar_widget.add_new_conversation()
-        
-        self.statusBar().showMessage("已创建新对话", 2000)
+        self.statusBar().showMessage("正在创建新对话...", 2000)
     
     def _save_chat(self):
         """保存对话"""
@@ -343,14 +388,31 @@ class MainWindow(QMainWindow):
     def _test_api_connection(self):
         """测试API连接"""
         if not self.api_client:
-            QMessageBox.warning(self, "警告", "API客户端未初始化")
+            UIUtils.show_warning_message(self, "警告", "API客户端未初始化")
             return
         
         self.statusBar().showMessage("正在测试API连接...")
         
-        # 这里应该使用异步方式测试，简化处理先显示消息
-        QMessageBox.information(self, "API测试", "API连接测试功能正在开发中...")
-        self.statusBar().showMessage("就绪", 2000)
+        # 使用异步工具测试API连接
+        UIUtils.run_async_task(
+            self.api_client.test_connection,
+            self._on_api_test_finished,
+            self._on_api_test_error
+        )
+    
+    def _on_api_test_finished(self, success: bool):
+        """API测试完成回调"""
+        if success:
+            UIUtils.show_info_message(self, "API测试", "API连接测试成功！")
+            self.statusBar().showMessage("API连接正常", 3000)
+        else:
+            UIUtils.show_error_message(self, "API测试", "API连接测试失败")
+            self.statusBar().showMessage("API连接失败", 3000)
+    
+    def _on_api_test_error(self, error: str):
+        """API测试错误回调"""
+        UIUtils.show_error_message(self, "API测试失败", f"测试过程中出错：{error}")
+        self.statusBar().showMessage("API测试错误", 3000)
     
     def _show_about(self):
         """显示关于对话框"""
@@ -412,6 +474,20 @@ class MainWindow(QMainWindow):
             except RuntimeError:
                 # 如果没有运行的事件循环，直接调用清理方法
                 asyncio.run(self.api_client.cleanup())
+        
+        # 清理存储管理器
+        if self.storage_manager:
+            try:
+                asyncio.create_task(self.storage_manager.cleanup())
+            except RuntimeError:
+                asyncio.run(self.storage_manager.cleanup())
+        
+        # 清理语音处理器
+        if self.voice_handler:
+            try:
+                self.voice_handler.cleanup()
+            except Exception as e:
+                logger.error(f"清理语音处理器失败: {e}")
         
         # 清理子组件
         if self.chat_widget:
