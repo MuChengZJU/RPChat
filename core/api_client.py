@@ -180,7 +180,7 @@ class OpenAIAPIClient:
                                     
                                     if content:
                                         yield content
-                                        
+                                    
                             except json.JSONDecodeError:
                                 continue  # 跳过无效的JSON行
                 
@@ -259,7 +259,7 @@ class OpenAIAPIClient:
     @property
     def is_local_api(self) -> bool:
         """判断是否为本地API服务"""
-        return 'localhost' in self.base_url or '127.0.0.1' in self.base_url or '192.168.' in self.base_url
+        return 'localhost' in self.base_url or '127.0.0.1' in self.base_url or '192.168.' in self.base_url 
         
     def cleanup(self):
         """清理API客户端资源"""

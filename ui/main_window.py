@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         logger.info("开始初始化核心组件...")
         
         try:
-            # 初始化API客户端
+        # 初始化API客户端
             logger.info("正在初始化API客户端...")
             self.api_client = OpenAIAPIClient(self.config)
             logger.info("API客户端初始化成功")
@@ -177,6 +177,16 @@ class MainWindow(QMainWindow):
         
         # 工具菜单
         tools_menu = menubar.addMenu("工具(&T)")
+        
+        # 添加语音模式切换选项
+        voice_mode_action = QAction("启用语音模式(&V)", self)
+        voice_mode_action.setShortcut(QKeySequence("Ctrl+Space"))
+        voice_mode_action.setCheckable(True)
+        voice_mode_action.setChecked(False)  # 默认关闭
+        voice_mode_action.triggered.connect(self._toggle_voice_mode)
+        tools_menu.addAction(voice_mode_action)
+        
+        tools_menu.addSeparator()
         
         settings_action = QAction("设置(&S)", self)
         settings_action.setShortcut(QKeySequence("Ctrl+,"))
@@ -324,6 +334,12 @@ class MainWindow(QMainWindow):
         """切换语音模式"""
         if self.chat_widget:
             self.chat_widget.set_voice_mode(checked)
+        
+        # 更新菜单项文本
+        sender = self.sender()
+        if sender and hasattr(sender, 'setText'):
+            text = "禁用语音模式(&V)" if checked else "启用语音模式(&V)"
+            sender.setText(text)
         
         mode = "语音模式" if checked else "文本模式"
         self.statusBar().showMessage(f"已切换到{mode}", 2000)
@@ -529,7 +545,7 @@ class MainWindow(QMainWindow):
             else:
                 # 使用默认的亮色主题
                 self.setStyleSheet("")
-            
+                
             logger.info(f"主题样式应用完成: {theme}")
             
         except Exception as e:
@@ -665,6 +681,12 @@ class MainWindow(QMainWindow):
         """切换语音模式"""
         if self.chat_widget:
             self.chat_widget.set_voice_mode(checked)
+        
+        # 更新菜单项文本
+        sender = self.sender()
+        if sender and hasattr(sender, 'setText'):
+            text = "禁用语音模式(&V)" if checked else "启用语音模式(&V)"
+            sender.setText(text)
         
         mode = "语音模式" if checked else "文本模式"
         self.statusBar().showMessage(f"已切换到{mode}", 2000)

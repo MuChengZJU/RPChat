@@ -215,21 +215,26 @@ class SidebarWidget(QWidget):
             item = ConversationListItem(conversation)
             self.conversation_list.addItem(item)
         
-        # 如果有对话且没有选中的，选中第一个
+        # 如果列表不为空，确保有项目被选中
         if self.conversation_list.count() > 0:
-            if self.current_conversation_id is None:
-                first_item = self.conversation_list.item(0)
-                if first_item:
-                    self.conversation_list.setCurrentItem(first_item)
-                    self.current_conversation_id = first_item.data(Qt.ItemDataRole.UserRole)
-                    self.conversation_selected.emit(self.current_conversation_id)
-            else:
-                # 保持当前选择
+            # 默认选择第一个
+            selected_item = self.conversation_list.item(0)
+
+            # 如果有已知的当前ID，尝试找到并选中它
+            if self.current_conversation_id:
                 for i in range(self.conversation_list.count()):
                     item = self.conversation_list.item(i)
                     if item.data(Qt.ItemDataRole.UserRole) == self.current_conversation_id:
-                        self.conversation_list.setCurrentItem(item)
+                        selected_item = item
                         break
+            
+            # 设置最终选中的项目
+            if selected_item:
+                self.conversation_list.setCurrentItem(selected_item)
+                # 如果之前没有选中项，则更新ID并发出信号
+                if self.current_conversation_id is None:
+                    self.current_conversation_id = selected_item.data(Qt.ItemDataRole.UserRole)
+                    self.conversation_selected.emit(self.current_conversation_id)
     
     def _update_stats_label(self, count: int):
         """更新统计标签"""

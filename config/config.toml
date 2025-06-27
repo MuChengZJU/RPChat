@@ -2,7 +2,7 @@
 name = "RPChat"
 version = "1.0.0"
 debug = false
-log_level = "INFO"
+log_level = "DEBUG"
 
 [api]
 base_url = "https://www.sophnet.com/api/open-apis/v1"
@@ -26,7 +26,8 @@ output_device_index = -1
 
 [audio.fish_audio]
 api_key = "cb51f1d74e8a4f15854d6fa5c701dea4"
-voice_id = "aebaa2305aa2452fbdc8f41eec852a79"
+voice_id = "54a5170264694bfc8e9ad98df7bd89c3"
+sample_rate = 32000
 
 # 自动发送语音识别结果
 auto_send_voice = true
