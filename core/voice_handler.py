@@ -168,37 +168,60 @@ class VoiceHandler:
     
     def start_listening(self):
         """开始语音识别监听"""
-        if not self.recognition_enabled or self._is_listening:
+        if not self.recognition_enabled or not self.recognizer or not self.microphone:
+            logger.warning("语音识别未启用或未初始化")
+            return
+
+        if self._is_listening:
+            logger.warning("已在监听状态")
             return
         
+        # 启动后台监听
+        self.stop_listening_event = threading.Event()
+        self.listen_thread = threading.Thread(
+            target=self._listen_in_background, 
+            args=(self.stop_listening_event,),
+            daemon=True
+        )
+        self.listen_thread.start()
         self._is_listening = True
-        
-        def listen_worker():
-            try:
-                with self.microphone as source:
-                    logger.info("开始语音监听...")
-                    while self._is_listening:
-                        try:
-                            audio = self.recognizer.listen(source, timeout=self.recognition_timeout, phrase_time_limit=self.phrase_time_limit)
-                            if not self._is_listening: break
-                            self._recognize_audio(audio)
-                        except sr.WaitTimeoutError:
-                            continue
-                        except Exception as e:
-                            logger.error(f"语音识别异常: {e}")
-                            if self.on_speech_error: self.on_speech_error(str(e))
+        logger.info("语音监听已启动")
+
+    def _listen_in_background(self, stop_event):
+        """在后台线程中运行的监听循环"""
+        try:
+            with self.microphone as source:
+                while not stop_event.is_set():
+                    try:
+                        audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=self.phrase_time_limit)
+                        if stop_event.is_set():
                             break
-            finally:
-                self._is_listening = False
-                logger.info("语音监听已停止")
-        
-        threading.Thread(target=listen_worker, daemon=True).start()
-    
+                        self._recognize_audio(audio)
+                    except sr.WaitTimeoutError:
+                        continue # 等待语音输入
+                    except Exception as e:
+                        if not stop_event.is_set():
+                            logger.error(f"语音识别异常: {e}")
+                            if self.on_speech_error:
+                                self.on_speech_error(str(e))
+                        break # 出现错误时退出循环
+        except Exception as e:
+            logger.error(f"麦克风错误: {e}")
+            if self.on_speech_error:
+                self.on_speech_error(f"麦克风错误: {e}")
+        finally:
+            logger.info("语音监听线程已结束")
+
     def stop_listening(self):
         """停止语音识别监听"""
-        if self._is_listening:
+        if self._is_listening and self.listen_thread:
             self._is_listening = False
-            logger.info("正在停止语音监听...")
+            self.stop_listening_event.set()
+            try:
+                self.listen_thread.join(timeout=1.0)
+            except Exception as e:
+                logger.error(f"等待监听线程结束时出错: {e}")
+            logger.info("语音监听已停止")
     
     def _recognize_audio(self, audio):
         """识别音频内容"""
@@ -207,10 +230,12 @@ class VoiceHandler:
             logger.info(f"识别到语音: {text}")
             if self.on_speech_recognized: self.on_speech_recognized(text)
         except sr.UnknownValueError:
+            logger.warning("无法识别语音内容")
             if self.on_speech_error: self.on_speech_error("无法识别语音内容")
         except sr.RequestError as e:
-            logger.error(f"语音识别服务错误: {e}")
-            if self.on_speech_error: self.on_speech_error(f"服务错误: {e}")
+            error_msg = f"语音服务请求失败: {e}"
+            logger.error(error_msg)
+            if self.on_speech_error: self.on_speech_error(error_msg)
     
     def speak(self, text: str, async_mode: bool = True):
         """文本转语音播放"""

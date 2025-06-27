@@ -28,6 +28,9 @@ output_device_index = -1
 api_key = "cb51f1d74e8a4f15854d6fa5c701dea4"
 voice_id = "aebaa2305aa2452fbdc8f41eec852a79"
 
+# 自动发送语音识别结果
+auto_send_voice = true
+
 [ui]
 theme = "light"
 font_family = "Microsoft YaHei"

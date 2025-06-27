@@ -121,14 +121,16 @@ class UIUtils:
         return reply == QMessageBox.StandardButton.Yes
     
     @staticmethod
-    def run_async_task(coro_func: Callable, 
+    def run_async_task(parent: QObject, 
+                      coro_func: Callable, 
                       on_finished: Optional[Callable[[Any], None]] = None,
                       on_error: Optional[Callable[[str], None]] = None,
                       *args, **kwargs) -> AsyncWorker:
         """
-        运行异步任务
+        运行异步任务, 并将其生命周期附加到父对象上
         
         Args:
+            parent: 父QObject, 用于存储worker引用
             coro_func: 异步函数
             on_finished: 完成回调函数
             on_error: 错误回调函数
@@ -139,7 +141,25 @@ class UIUtils:
             AsyncWorker: 工作线程对象
         """
         worker = AsyncWorker(coro_func, *args, **kwargs)
+
+        # 确保父对象有worker列表
+        if not hasattr(parent, "_async_workers"):
+            parent._async_workers = []
         
+        # 添加worker到列表以保持引用
+        parent._async_workers.append(worker)
+        
+        # 任务完成后从列表中移除worker
+        def on_worker_done():
+            if worker in parent._async_workers:
+                parent._async_workers.remove(worker)
+            logger.trace(f"Worker {id(worker)} finished and removed. "
+                         f"Remaining workers for {parent.__class__.__name__}: {len(parent._async_workers)}")
+
+        worker.finished.connect(on_worker_done)
+        worker.error.connect(on_worker_done)
+        
+        # 连接用户提供的回调
         if on_finished:
             worker.finished.connect(on_finished)
         if on_error:
