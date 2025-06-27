@@ -45,12 +45,5 @@ python-dateutil>=2.8.2
 # JSON处理增强
 orjson>=3.9.0
 
-# 开发和测试工具（可选）
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-pytest-qt>=4.2.0
-black>=23.0.0
-flake8>=6.0.0
-
 # 树莓派特定依赖
 RPi.GPIO>=0.7.1; platform_machine=="armv7l" or platform_machine=="aarch64" 

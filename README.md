@@ -115,9 +115,50 @@ RPChat/
 - **网络：** 稳定的网络连接（用于API调用）
 - **音频：** USB麦克风和扬声器
 
+## 📦 项目依赖
+
+### 核心依赖
+- **PyQt6** (>=6.5.0) - 跨平台GUI框架
+- **aiohttp** (>=3.8.0) - 异步HTTP客户端
+- **openai** (>=1.0.0) - OpenAI API官方客户端
+- **pyttsx3** (>=2.90) - 文本转语音引擎
+- **SpeechRecognition** (>=3.10.0) - 语音识别库
+- **aiosqlite** (>=0.19.0) - 异步SQLite数据库
+
+### 音频处理
+- **pyaudio** (>=0.2.11) - 音频I/O处理
+- **soundfile** (>=0.12.1) - 音频文件格式支持
+- **numpy** (>=1.24.0) - 数值计算支持
+
+### 系统工具
+- **toml** (>=0.10.2) - 配置文件解析
+- **loguru** (>=0.7.0) - 现代化日志系统
+- **psutil** (>=5.9.0) - 系统资源监控
+- **qdarkstyle** (>=3.2.0) - 深色主题样式
+
+### 开发工具（可选）
+- **pytest** (>=7.4.0) - 单元测试框架
+- **pytest-qt** (>=4.2.0) - PyQt测试支持
+- **black** (>=23.0.0) - 代码格式化
+- **flake8** (>=6.0.0) - 代码质量检查
+
 ## 🚀 快速开始
 
-### 环境准备
+### 系统依赖安装（Ubuntu/树莓派）
+```bash
+# 更新系统包
+sudo apt update && sudo apt upgrade -y
+
+# 安装音频系统依赖
+sudo apt install -y portaudio19-dev python3-pyaudio
+sudo apt install -y espeak espeak-data libespeak1 libespeak-dev
+sudo apt install -y flac libasound2-dev
+
+# 安装Qt6依赖
+sudo apt install -y python3-pyqt6 python3-pyqt6.qtmultimedia
+```
+
+### Python环境准备
 ```bash
 # 安装uv包管理器
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -129,7 +170,44 @@ cd RPChat
 # 创建虚拟环境并安装依赖
 uv venv
 source .venv/bin/activate
+
+# 生产环境安装
 uv pip install -r requirements.txt
+
+# 开发环境安装（包含测试、调试工具）
+uv pip install -r requirements-dev.txt
+```
+
+### 开发环境配置
+```bash
+# 安装pre-commit钩子（推荐）
+pre-commit install
+
+# 代码格式化
+black .
+isort .
+
+# 代码质量检查
+flake8 .
+mypy .
+
+# 运行测试
+pytest tests/
+
+# 生成测试覆盖率报告
+pytest --cov=. --cov-report=html
+```
+
+### 树莓派特殊配置
+```bash
+# 树莓派音频配置
+sudo raspi-config  # 启用音频接口
+
+# 配置音频权限
+sudo usermod -a -G audio $USER
+
+# 重启后生效
+sudo reboot
 ```
 
 ### 配置设置
@@ -140,6 +218,52 @@ uv pip install -r requirements.txt
 ### 运行应用
 ```bash
 python main.py
+```
+
+## 🔧 依赖管理
+
+### 安装策略
+- **生产环境：** 使用 `requirements.txt` 仅安装核心运行依赖
+- **开发环境：** 使用 `requirements-dev.txt` 安装完整开发工具链
+- **最小化安装：** 针对树莓派可选择性安装部分功能依赖
+
+### 版本管理
+```bash
+# 更新所有依赖到最新版本
+uv pip install --upgrade -r requirements.txt
+
+# 生成当前环境的精确版本锁定文件
+uv pip freeze > requirements.lock
+
+# 检查依赖安全漏洞
+safety check
+
+# 清理未使用的依赖
+pip-autoremove -y
+```
+
+### 树莓派优化安装
+```bash
+# 最小化安装（仅文本对话功能）
+uv pip install PyQt6 aiohttp openai toml aiosqlite loguru
+
+# 添加语音功能
+uv pip install pyttsx3 SpeechRecognition pyaudio
+
+# 完整功能安装
+uv pip install -r requirements.txt
+```
+
+### 依赖问题排查
+```bash
+# 检查依赖冲突
+pip check
+
+# 查看依赖树
+pipdeptree
+
+# 重新安装损坏的包
+uv pip install --force-reinstall package_name
 ```
 
 ## 📁 配置文件
@@ -179,6 +303,65 @@ python main.py
 - 清晰的错误提示和状态反馈
 - 快捷键支持
 
+## ❓ 常见问题
+
+### 依赖安装问题
+
+**Q: PyAudio安装失败怎么办？**
+```bash
+# Ubuntu/树莓派解决方案
+sudo apt install portaudio19-dev python3-pyaudio
+uv pip install --global-option="build_ext" --global-option="-I/usr/local/include" --global-option="-L/usr/local/lib" pyaudio
+```
+
+**Q: 树莓派上PyQt6安装很慢？**
+```bash
+# 使用系统包代替pip安装
+sudo apt install python3-pyqt6 python3-pyqt6.qtmultimedia
+# 然后在虚拟环境中创建符号链接
+```
+
+**Q: 音频设备识别不到？**
+```bash
+# 检查音频设备
+arecord -l
+aplay -l
+
+# 测试音频录制
+arecord -d 5 test.wav
+aplay test.wav
+```
+
+### 性能优化问题
+
+**Q: 树莓派运行卡顿？**
+- 增加虚拟内存：`sudo dphys-swapfile swapoff && sudo dphys-swapfile swapon`
+- 关闭不必要的后台服务
+- 使用轻量级TTS引擎
+- 减少并发请求数量
+
+**Q: 语音识别延迟高？**
+- 优先使用本地语音识别
+- 调整音频采样率和缓冲区大小
+- 使用更快的网络连接
+
+### 开发环境问题
+
+**Q: 在Mac上开发，树莓派上部署有什么注意事项？**
+- 使用相同的Python版本
+- 注意音频库的平台差异
+- 测试不同分辨率的界面显示
+- 验证API网络连接
+
+**Q: 如何在无头树莓派上测试GUI？**
+```bash
+# 使用Xvfb虚拟显示
+sudo apt install xvfb
+export DISPLAY=:99
+Xvfb :99 -screen 0 1024x768x24 &
+python main.py
+```
+
 ## 📄 许可证
 
 本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
@@ -190,6 +373,27 @@ python main.py
 - [uv 包管理器](https://github.com/astral-sh/uv)
 
 ---
+
+## 📂 项目文件结构
+
+```
+RPChat/
+├── README.md              # 项目说明文档
+├── requirements.txt       # 生产环境依赖
+├── requirements-dev.txt   # 开发环境依赖
+├── LICENSE               # 开源许可证
+├── .gitignore           # Git忽略文件
+├── main.py              # 应用程序入口（待创建）
+├── config/              # 配置文件目录（待创建）
+│   ├── config.template.toml
+│   └── config.toml
+├── core/                # 核心业务逻辑（待创建）
+├── ui/                  # 用户界面（待创建）
+├── utils/               # 工具函数（待创建）
+├── resources/           # 资源文件（待创建）
+├── tests/               # 测试代码（待创建）
+└── docs/                # 文档（待创建）
+```
 
 **注意：** 本项目专门针对树莓派4B进行优化，在其他平台上可能需要调整配置参数。
 
