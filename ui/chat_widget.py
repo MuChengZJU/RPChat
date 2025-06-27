@@ -51,6 +51,7 @@ class ChatWidget(QWidget):
         
         # UI组件
         self.voice_button = None
+        self.stop_button = None
         self.progress_bar = None
         self.loading_timer = None
         
@@ -87,6 +88,14 @@ class ChatWidget(QWidget):
         self.voice_button.setCheckable(True)
         self.voice_button.clicked.connect(self._toggle_voice_input)
         input_layout.addWidget(self.voice_button)
+        
+        # 停止播放按钮
+        self.stop_button = QPushButton("⏹️")
+        self.stop_button.setFixedSize(40, 40)
+        self.stop_button.setToolTip("停止播放")
+        self.stop_button.setVisible(False)
+        self.stop_button.clicked.connect(self._stop_speaking)
+        input_layout.addWidget(self.stop_button)
         
         # 文本输入框
         self.message_input = QLineEdit()
@@ -228,6 +237,9 @@ class ChatWidget(QWidget):
         
         # 如果启用了语音模式且是AI回复，播放语音
         if self.voice_mode and sender == "AI助手" and self.voice_handler:
+            # 在播放前，确保停止任何可能正在进行的监听
+            if self.voice_handler.is_listening:
+                self._stop_voice_input()
             self.voice_handler.speak(content)
     
     def _handle_ai_request(self, message: str):
@@ -340,6 +352,11 @@ class ChatWidget(QWidget):
             UIUtils.show_warning_message(self, "警告", "语音功能不可用")
             self.voice_button.setChecked(False)
             return
+
+        if self.voice_handler.is_speaking:
+            UIUtils.show_warning_message(self, "提示", "正在播放语音，请稍后再试")
+            self.voice_button.setChecked(False)
+            return
         
         if self.voice_button.isChecked():
             self._start_voice_input()
@@ -349,6 +366,12 @@ class ChatWidget(QWidget):
     def _start_voice_input(self):
         """开始语音输入"""
         try:
+            # 增加保护，防止在播放时启动
+            if self.voice_handler and self.voice_handler.is_speaking:
+                logger.warning("正在播放语音，无法启动监听")
+                self.voice_button.setChecked(False)
+                return
+
             self.voice_handler.start_listening()
             self.voice_button.setText("🔴")
             self.voice_button.setToolTip("点击停止语音输入")
@@ -389,15 +412,35 @@ class ChatWidget(QWidget):
         """语音识别错误回调"""
         logger.warning(f"语音识别错误: {error}")
         self.status_label.setText(f"语音识别错误: {error}")
+        # 出错时重置按钮状态
+        self.voice_button.setChecked(False)
+        self._stop_voice_input()
     
     def _on_tts_started(self):
         """TTS开始播放回调"""
         self.status_label.setText("正在播放语音...")
+        self.voice_button.setEnabled(False)
+        self.stop_button.setVisible(True)
     
     def _on_tts_finished(self):
         """TTS播放完成回调"""
         self.status_label.setText("就绪")
-    
+        self.voice_button.setEnabled(True)
+        self.stop_button.setVisible(False)
+        
+        # 如果在语音模式下，播放完毕后自动开始监听
+        if self.voice_mode and not self.is_processing:
+            logger.info("语音模式下，播放完成，自动开始监听...")
+            self.voice_button.setChecked(True)
+            self._start_voice_input()
+
+    def _stop_speaking(self):
+        """手动停止TTS播放"""
+        logger.info("请求停止语音播放...")
+        if self.voice_handler:
+            self.voice_handler.stop_speaking()
+        # UI状态将通过 on_tts_finished 回调自动更新
+
     # 存储相关方法
     def _on_message_saved(self, stored_message):
         """消息保存回调"""
