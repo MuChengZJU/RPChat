@@ -37,18 +37,18 @@ tts_volume = 0.8
 input_device_index = -1  # -1 表示使用默认设备
 output_device_index = -1
 
+# 自动发送语音识别结果
+auto_send_voice = true
+
 [audio.fish_audio]
 api_key = "your_fish_audio_api_key"
 voice_id = "your_favorite_voice_id" # Optional, can be specified per request
 sample_rate = 32000 # Fish Audio API 的默认采样率
 
-# 自动发送语音识别结果
-auto_send_voice = true
-
 [ui]
 # 界面配置
-theme = "dark"  # dark, light
-font_family = "Microsoft YaHei"
+theme = "light"
+font_family = "MiSans VF"
 font_size = 12
 window_width = 1000
 window_height = 700

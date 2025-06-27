@@ -55,7 +55,28 @@ class OpenAIAPIClient:
         self.max_tokens = self.config.get("api.max_tokens", 2000)
         self.temperature = self.config.get("api.temperature", 0.7)
         
+        self.session: Optional[aiohttp.ClientSession] = None
+        
         logger.info(f"初始化API客户端: {self.base_url}, 模型: {self.model}")
+    
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """获取或创建 aiohttp.ClientSession"""
+        if self.session is None or self.session.closed:
+            self.session = self._create_client_session()
+        return self.session
+    
+    def _create_client_session(self) -> aiohttp.ClientSession:
+        """根据配置创建 aiohttp.ClientSession"""
+        timeout = aiohttp.ClientTimeout(total=self.timeout)
+        
+        # 如果是本地或局域网HTTP服务，则不使用SSL
+        if self.base_url.startswith("http://"):
+            connector = aiohttp.TCPConnector(ssl=False)
+            logger.info("正在为HTTP服务创建不带SSL验证的会话")
+            return aiohttp.ClientSession(timeout=timeout, connector=connector)
+        
+        logger.info("正在为HTTPS服务创建带SSL验证的会话")
+        return aiohttp.ClientSession(timeout=timeout)
     
     def _get_headers(self) -> Dict[str, str]:
         """获取请求头"""
@@ -111,21 +132,20 @@ class OpenAIAPIClient:
         payload = self._build_chat_payload(messages)
         
         try:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                logger.debug(f"发送API请求: {url}")
-                logger.trace(f"请求载荷: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+            session = await self._get_session()
+            logger.debug(f"发送API请求: {url}")
+            logger.trace(f"请求载荷: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+            
+            async with session.post(url, headers=headers, json=payload, allow_redirects=False) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"API请求失败: {response.status} - {error_text}")
+                    raise APIClientError(f"API请求失败: {response.status} - {error_text}")
                 
-                async with session.post(url, headers=headers, json=payload) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"API请求失败: {response.status} - {error_text}")
-                        raise APIClientError(f"API请求失败: {response.status} - {error_text}")
-                    
-                    response_data = await response.json()
-                    logger.trace(f"API响应: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
-                    
-                    return self._parse_chat_response(response_data)
+                response_data = await response.json()
+                logger.trace(f"API响应: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+                
+                return self._parse_chat_response(response_data)
                 
         except aiohttp.ClientError as e:
             logger.error(f"HTTP请求错误: {e}")
@@ -152,37 +172,36 @@ class OpenAIAPIClient:
         payload = self._build_chat_payload(messages, stream=True)
         
         try:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                logger.debug(f"发送流式API请求: {url}")
+            session = await self._get_session()
+            logger.debug(f"发送流式API请求: {url}")
+            
+            async with session.post(url, headers=headers, json=payload, allow_redirects=False) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"流式API请求失败: {response.status} - {error_text}")
+                    raise APIClientError(f"流式API请求失败: {response.status} - {error_text}")
                 
-                async with session.post(url, headers=headers, json=payload) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"流式API请求失败: {response.status} - {error_text}")
-                        raise APIClientError(f"流式API请求失败: {response.status} - {error_text}")
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
                     
-                    async for line in response.content:
-                        line = line.decode('utf-8').strip()
+                    if line.startswith('data: '):
+                        data = line[6:]  # 移除 'data: ' 前缀
                         
-                        if line.startswith('data: '):
-                            data = line[6:]  # 移除 'data: ' 前缀
+                        if data == '[DONE]':
+                            break
+                        
+                        try:
+                            chunk_data = json.loads(data)
                             
-                            if data == '[DONE]':
-                                break
-                            
-                            try:
-                                chunk_data = json.loads(data)
+                            if 'choices' in chunk_data and chunk_data['choices']:
+                                delta = chunk_data['choices'][0].get('delta', {})
+                                content = delta.get('content', '')
                                 
-                                if 'choices' in chunk_data and chunk_data['choices']:
-                                    delta = chunk_data['choices'][0].get('delta', {})
-                                    content = delta.get('content', '')
-                                    
-                                    if content:
-                                        yield content
-                                    
-                            except json.JSONDecodeError:
-                                continue  # 跳过无效的JSON行
+                                if content:
+                                    yield content
+                                
+                        except json.JSONDecodeError:
+                            continue  # 跳过无效的JSON行
                 
         except aiohttp.ClientError as e:
             logger.error(f"流式HTTP请求错误: {e}")
@@ -254,6 +273,11 @@ class OpenAIAPIClient:
         self.max_tokens = self.config.get("api.max_tokens", 2000)
         self.temperature = self.config.get("api.temperature", 0.7)
         
+        # 关闭旧的会话，以便下次请求时重新创建
+        if self.session and not self.session.closed:
+            asyncio.create_task(self.session.close())
+        self.session = None
+        
         logger.info("API客户端配置已更新")
     
     @property
@@ -261,6 +285,9 @@ class OpenAIAPIClient:
         """判断是否为本地API服务"""
         return 'localhost' in self.base_url or '127.0.0.1' in self.base_url or '192.168.' in self.base_url 
         
-    def cleanup(self):
+    async def cleanup(self):
         """清理API客户端资源"""
+        if self.session and not self.session.closed:
+            await self.session.close()
+            logger.info("aiohttp.ClientSession已关闭")
         logger.info("API客户端资源已清理") 

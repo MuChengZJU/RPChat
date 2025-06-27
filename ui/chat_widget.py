@@ -147,6 +147,7 @@ class ChatWidget(QWidget):
             self.voice_handler.on_speech_error = self._on_speech_error
             self.voice_handler.on_tts_started = self._on_tts_started
             self.voice_handler.on_tts_finished = self._on_tts_finished
+            self.voice_handler.on_listening_stopped = self._on_listening_stopped
             
             # 初始化语音组件（可能失败，但不影响文本功能）
             try:
@@ -388,13 +389,20 @@ class ChatWidget(QWidget):
         try:
             if self.voice_handler:
                 self.voice_handler.stop_listening()
-            self.voice_button.setText("🎤")
-            self.voice_button.setToolTip("点击开始语音输入")
-            self.status_label.setText("就绪")
-            self.voice_input_finished.emit()
-            logger.info("停止语音输入")
         except Exception as e:
-            logger.error(f"停止语音输入失败: {e}")
+            logger.error(f"请求停止语音输入时失败: {e}")
+    
+    def _on_listening_stopped(self):
+        """语音监听停止的回调"""
+        # 确保UI更新在主线程中执行
+        if self.voice_button.isChecked():
+            self.voice_button.setChecked(False)
+        self.voice_button.setText("🎤")
+        self.voice_button.setToolTip("点击开始语音输入")
+        if self.status_label.text() == "正在监听语音...":
+            self.status_label.setText("就绪")
+        self.voice_input_finished.emit()
+        logger.info("UI已更新以响应语音监听停止")
     
     # 语音事件回调
     def _on_speech_recognized(self, text: str):
@@ -412,8 +420,7 @@ class ChatWidget(QWidget):
         """语音识别错误回调"""
         logger.warning(f"语音识别错误: {error}")
         self.status_label.setText(f"语音识别错误: {error}")
-        # 出错时重置按钮状态
-        self.voice_button.setChecked(False)
+        # 出错时，请求停止监听，UI更新将由 on_listening_stopped 回调处理
         self._stop_voice_input()
     
     def _on_tts_started(self):

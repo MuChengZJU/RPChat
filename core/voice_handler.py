@@ -79,6 +79,7 @@ class VoiceHandler:
         self.on_speech_error: Optional[Callable[[str], None]] = None
         self.on_tts_started: Optional[Callable[[], None]] = None
         self.on_tts_finished: Optional[Callable[[], None]] = None
+        self.on_listening_stopped: Optional[Callable[[], None]] = None
         
         logger.info("语音处理器初始化完成")
     
@@ -236,19 +237,19 @@ class VoiceHandler:
         finally:
             self._is_listening = False
             self._microphone_lock.release()
+            if self.on_listening_stopped:
+                self.on_listening_stopped()
             logger.info("语音监听线程已结束，麦克风锁已释放。")
 
     def stop_listening(self):
         """停止语音识别监听"""
+        if not self._is_listening:
+            return
+
         if self._stop_listening_event:
             self._stop_listening_event.set()
         
-        # 等待线程结束（锁被释放）
-        if self._listen_thread and self._listen_thread.is_alive():
-            self._listen_thread.join(timeout=1.5)
-        
-        self._is_listening = False
-        logger.info("语音监听已停止")
+        logger.info("已发送停止监听信号")
     
     def _recognize_audio(self, audio):
         """识别音频内容"""
