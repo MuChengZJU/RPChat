@@ -177,6 +177,7 @@ class SidebarWidget(QWidget):
         
         # 异步加载对话
         UIUtils.run_async_task(
+            self,
             self.storage_manager.get_conversations,
             self._on_conversations_loaded,
             self._on_conversations_load_error,
@@ -212,13 +213,23 @@ class SidebarWidget(QWidget):
         
         for conversation in conversations:
             item = ConversationListItem(conversation)
-        self.conversation_list.addItem(item)
+            self.conversation_list.addItem(item)
         
         # 如果有对话且没有选中的，选中第一个
-        if self.conversation_list.count() > 0 and not self.current_conversation_id:
-            first_item = self.conversation_list.item(0)
-            self.conversation_list.setCurrentItem(first_item)
-            self.current_conversation_id = first_item.data(Qt.ItemDataRole.UserRole)
+        if self.conversation_list.count() > 0:
+            if self.current_conversation_id is None:
+                first_item = self.conversation_list.item(0)
+                if first_item:
+                    self.conversation_list.setCurrentItem(first_item)
+                    self.current_conversation_id = first_item.data(Qt.ItemDataRole.UserRole)
+                    self.conversation_selected.emit(self.current_conversation_id)
+            else:
+                # 保持当前选择
+                for i in range(self.conversation_list.count()):
+                    item = self.conversation_list.item(i)
+                    if item.data(Qt.ItemDataRole.UserRole) == self.current_conversation_id:
+                        self.conversation_list.setCurrentItem(item)
+                        break
     
     def _update_stats_label(self, count: int):
         """更新统计标签"""
@@ -249,6 +260,7 @@ class SidebarWidget(QWidget):
         
         # 异步搜索
         UIUtils.run_async_task(
+            self,
             self.storage_manager.search_conversations,
             self._on_search_results,
             self._on_search_error,
@@ -341,6 +353,7 @@ class SidebarWidget(QWidget):
             # 异步更新数据库
             if self.storage_manager:
                 UIUtils.run_async_task(
+                    self,
                     self.storage_manager.update_conversation,
                     lambda _: self._on_conversation_renamed(item.conversation.id, new_title),
                     lambda error: logger.error(f"重命名对话失败: {error}"),
@@ -379,6 +392,7 @@ class SidebarWidget(QWidget):
             # 异步删除数据库记录
             if self.storage_manager:
                 UIUtils.run_async_task(
+                    self,
                     self.storage_manager.delete_conversation,
                     lambda _: self._on_conversation_deleted(conv_id),
                     lambda error: logger.error(f"删除对话失败: {error}"),

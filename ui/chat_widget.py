@@ -250,6 +250,7 @@ class ChatWidget(QWidget):
         # 保存用户消息到数据库
         if self.storage_manager and self.current_conversation:
             UIUtils.run_async_task(
+                self,
                 self.storage_manager.add_message,
                 None,  # on_finished - 用户消息保存不需要特殊处理
                 self._on_storage_error,
@@ -259,6 +260,7 @@ class ChatWidget(QWidget):
         
         # 发送API请求
         UIUtils.run_async_task(
+            self,
             self.api_client.chat_completion,
             self._on_ai_response_received,
             self._on_ai_request_error,
@@ -278,6 +280,7 @@ class ChatWidget(QWidget):
             # 保存AI消息到数据库
             if self.storage_manager and self.current_conversation:
                 UIUtils.run_async_task(
+                    self,
                     self.storage_manager.add_message,
                     self._on_message_saved,
                     self._on_storage_error,
@@ -424,6 +427,7 @@ class ChatWidget(QWidget):
             # 异步更新数据库
             if self.storage_manager:
                 UIUtils.run_async_task(
+                    self,
                     self.storage_manager.update_conversation,
                     lambda _: self.conversation_updated.emit(self.current_conversation.id),
                     self._on_storage_error,
@@ -436,6 +440,7 @@ class ChatWidget(QWidget):
         if self.current_conversation and self.storage_manager:
             # 创建新对话
             UIUtils.run_async_task(
+                self,
                 self.storage_manager.create_conversation,
                 self._on_new_conversation_created,
                 self._on_storage_error,
@@ -492,6 +497,7 @@ class ChatWidget(QWidget):
         
         # 异步加载对话
         UIUtils.run_async_task(
+            self,
             self._load_conversation_async,
             self._on_conversation_loaded,
             self._on_conversation_load_error,
@@ -624,7 +630,7 @@ class ChatWidget(QWidget):
             # 停止语音功能
             if hasattr(self, 'voice_handler') and self.voice_handler:
                 try:
-                    self.voice_handler.stop_recording()
+                    self.voice_handler.stop_listening()
                     self.voice_handler.stop_speaking()
                     self.voice_handler.cleanup()
                     logger.debug("语音处理器清理完成")

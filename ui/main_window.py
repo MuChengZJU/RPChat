@@ -210,6 +210,14 @@ class MainWindow(QMainWindow):
         
         # 创建聊天区域
         self.chat_widget = ChatWidget(self.config)
+        
+        # 将API客户端传递给聊天组件
+        if self.api_client:
+            self.chat_widget.set_api_client(self.api_client)
+            logger.debug("API客户端已传递给聊天组件")
+        else:
+            logger.warning("API客户端未初始化，聊天功能将受限")
+            
         splitter.addWidget(self.chat_widget)
         
         # 设置分隔器比例
@@ -351,6 +359,7 @@ class MainWindow(QMainWindow):
         
         # 使用异步工具测试API连接
         UIUtils.run_async_task(
+            self,
             self.api_client.test_connection,
             self._on_api_test_finished,
             self._on_api_test_error
@@ -438,7 +447,7 @@ class MainWindow(QMainWindow):
             # 清理存储管理器
             if hasattr(self, 'storage_manager') and self.storage_manager:
                 try:
-                    asyncio.create_task(self.storage_manager.close())
+                    asyncio.run(self.storage_manager.cleanup())
                     logger.debug("存储管理器清理完成")
                 except Exception as e:
                     logger.error(f"清理存储管理器时出错: {e}")
@@ -542,6 +551,14 @@ class MainWindow(QMainWindow):
         
         # 创建聊天区域
         self.chat_widget = ChatWidget(self.config)
+        
+        # 将API客户端传递给聊天组件
+        if self.api_client:
+            self.chat_widget.set_api_client(self.api_client)
+            logger.debug("API客户端已传递给聊天组件")
+        else:
+            logger.warning("API客户端未初始化，聊天功能将受限")
+            
         splitter.addWidget(self.chat_widget)
         
         # 设置分隔器比例
@@ -683,6 +700,7 @@ class MainWindow(QMainWindow):
         
         # 使用异步工具测试API连接
         UIUtils.run_async_task(
+            self,
             self.api_client.test_connection,
             self._on_api_test_finished,
             self._on_api_test_error
@@ -770,7 +788,7 @@ class MainWindow(QMainWindow):
             # 清理存储管理器
             if hasattr(self, 'storage_manager') and self.storage_manager:
                 try:
-                    asyncio.create_task(self.storage_manager.close())
+                    asyncio.run(self.storage_manager.cleanup())
                     logger.debug("存储管理器清理完成")
                 except Exception as e:
                     logger.error(f"清理存储管理器时出错: {e}")
