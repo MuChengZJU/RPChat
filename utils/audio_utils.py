@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 音频处理工具模块
 提供音频文件处理和格式转换功能
@@ -8,6 +9,9 @@ import numpy as np
 from pathlib import Path
 from typing import Tuple, Optional
 from loguru import logger
+import os
+import sys
+import contextlib
 
 try:
     import soundfile as sf
@@ -16,6 +20,32 @@ except ImportError:
     SOUNDFILE_AVAILABLE = False
     logger.warning("soundfile 未安装，部分音频功能可能不可用")
 
+@contextlib.contextmanager
+def suppress_alsa_errors():
+    """一个用于抑制ALSA错误消息的上下文管理器"""
+    # 这是解决ALSA/PyAudio初始化时产生大量噪音的常用方法
+    original_stderr_fd = None
+    saved_stderr_fd = -1
+    devnull_fd = -1
+    
+    try:
+        # 复制标准错误的文件描述符
+        original_stderr_fd = sys.stderr.fileno()
+        saved_stderr_fd = os.dup(original_stderr_fd)
+        
+        # 打开/dev/null并将其重定向到标准错误
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull_fd, original_stderr_fd)
+        
+        yield
+    finally:
+        # 恢复原始的标准错误
+        if saved_stderr_fd != -1:
+            os.dup2(saved_stderr_fd, original_stderr_fd)
+            os.close(saved_stderr_fd)
+        
+        if devnull_fd != -1:
+            os.close(devnull_fd)
 
 class AudioProcessor:
     """音频处理器"""

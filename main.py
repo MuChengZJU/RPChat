@@ -83,6 +83,7 @@ class RPChatApplication:
         if not self.initialize():
             return 1
             
+        exit_code = 0
         try:
             # 显示主窗口
             logger.info("正在显示主窗口...")
@@ -91,32 +92,31 @@ class RPChatApplication:
             logger.info("RPChat 应用程序启动成功")
             
             # 运行应用程序事件循环
-            return self.app.exec()
+            exit_code = self.app.exec()
             
         except Exception as e:
             logger.error(f"应用程序运行错误: {e}")
             import traceback
             logger.error(f"详细错误信息:\n{traceback.format_exc()}")
-            return 1
-        finally:
-            self.cleanup()
+            exit_code = 1
+        
+        return exit_code
     
     def cleanup(self):
         """清理资源"""
         logger.info("正在清理应用程序资源...")
         
-        try:
-            if self.main_window:
+        if self.main_window:
+            try:
                 self.main_window.cleanup()
-            
-            # 等待所有线程结束
-            logger.info("等待线程结束...")
-            import time
-            time.sleep(0.5)
-            
-            logger.info("应用程序已退出")
-        except Exception as e:
-            logger.error(f"清理资源时出错: {e}")
+            except Exception as e:
+                logger.error(f"清理主窗口时出错: {e}")
+        
+        logger.info("等待线程结束...")
+        import time
+        time.sleep(0.5)
+        
+        logger.info("应用程序已退出")
 
 
 def signal_handler(sig, frame):

@@ -42,7 +42,7 @@ case $choice in
     3)
         echo "🌐 SSH X11转发模式..."
         echo "请确保您的SSH连接使用了 -X 或 -Y 参数"
-        echo "例如: ssh -X user@$(hostname -I | awk '{print $1}')"
+        echo "例如: ssh -X user@192.168.121.84"
         if [ -z "$DISPLAY" ]; then
             echo "警告: DISPLAY 环境变量未设置"
             echo "如果您使用的是SSH X11转发，请检查SSH配置"
